@@ -221,6 +221,12 @@ public:
     }
 
 
+    matrix_type* data() const
+    {
+        return &mx_;
+    }
+
+
 private:
     matrix_type mx_;
 };
