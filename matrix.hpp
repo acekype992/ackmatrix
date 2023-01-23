@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2022 acekype992
+// Copyright (c) 2022 - 2023 acekype992
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,121 +24,122 @@
 #ifndef ACK_MATRIX_HPP
 #define ACK_MATRIX_HPP
 
-#include "matrix_traits.hpp"
+#include <cassert>
+#include <array>
 #include <algorithm>
 #include <concepts>
 #include <numeric>
 #include <ostream>
-#include <iostream>
 
 namespace ack {
 
+template<class T_, std::size_t N_, std::size_t M_>
+class basic_matrix;
 
-template<class Tp_, std::size_t M_, std::size_t N_>
-requires std::integral<Tp_> || std::floating_point<Tp_>
-class basic_numeric_matrix;
+template<class T_, std::size_t N_, std::size_t M_>
+requires std::integral<T_> || std::floating_point<T_>
+using basic_numeric_matrix = basic_matrix<T_, N_, M_>;
+
+template<std::size_t N_, std::size_t M_> using MatrixF  = basic_numeric_matrix<float, N_, M_>;
+template<std::size_t N_, std::size_t M_> using MatrixI  = basic_numeric_matrix<int, N_, M_>;
+template<std::size_t N_, std::size_t M_> using MatrixU  = basic_numeric_matrix<unsigned int, N_, M_>;
 
 
-template<std::size_t M_, std::size_t N_> using MatrixInt = basic_numeric_matrix<int, M_, N_>;
-template<std::size_t M_, std::size_t N_> using MatrixF = basic_numeric_matrix<float, M_, N_>;
-
-
-template<class Tp_, std::size_t M_, std::size_t N_>
-basic_numeric_matrix<Tp_, M_, N_>
-                    operator+(basic_numeric_matrix<Tp_, M_, N_> lhs,
-                                const basic_numeric_matrix<Tp_, M_, N_> &rhs) noexcept
+///
+/// \brief The basic_matrix class
+///
+template<class T_, std::size_t N_, std::size_t M_>
+class basic_matrix
 {
-    lhs += rhs;
-    return lhs;
-}
+public:
+    using element_type      = T_;
+    using container_type    = std::array<T_, N_ * M_>;
+    using matrix_type       = basic_matrix<T_, N_, M_>;
+    using size_type         = std::size_t;
 
+    static inline constexpr const std::size_t   columns {N_};
+    static inline constexpr const size_type     rows    {M_};
 
-template<class Tp_, std::size_t M_, std::size_t N_>
-basic_numeric_matrix<Tp_, M_, N_>
-                    operator-(basic_numeric_matrix<Tp_, M_, N_> lhs,
-                                const basic_numeric_matrix<Tp_, M_, N_> &rhs) noexcept
-{
-    lhs -= rhs;
-    return lhs;
-}
-
-
-template<class Tp_, std::size_t M_, std::size_t N_>
-basic_numeric_matrix<Tp_, M_, MatrixInt<N_, M_>::columns>
-                    operator*(const basic_numeric_matrix<Tp_, M_, N_> &lhs,
-                                const basic_numeric_matrix<Tp_, N_, M_> &rhs) noexcept
-{
-    MatrixInt<lhs.rows, rhs.columns> result;
-    std::size_t rx_counter {0};
-    std::size_t ry_counter {0};
-
-    for(std::size_t y {0}; y < lhs.rows; ++y)
+    basic_matrix()
     {
-        const auto current_row {lhs.get_row(y)};
-        for(std::size_t x {0}; x < rhs.columns; ++x)
-        {
-            const auto current_column {rhs.get_column(x)};
-            Tp_ val {0};
-            for(std::size_t j {0}; j < N_; ++j)
-                val += current_row(0, j) * current_column(j, 0);
-
-            result(y, x) = val;
-        }
+        fill(element_type{});
     }
 
-    return result;
-}
-
-
-template<class Tp_, std::size_t M_, std::size_t N_>
-std::ostream& operator<<(std::ostream &stream, const basic_numeric_matrix<Tp_, M_, N_> &matrix)
-{
-    for(std::size_t y {0}; y < matrix.rows; ++y)
+    basic_matrix(const element_type &data)
     {
-        for(std::size_t x {0}; x < matrix.columns; ++x)
-            stream << matrix(y, x) << " ";
-
-        stream << (y < matrix.rows -1 ? "\n" : "");
+        fill(data);
     }
 
-    return stream;
-}
+    ~basic_matrix() noexcept = default;
+
+    element_type operator()(size_type column, size_type row) const noexcept
+    {
+        return mx_[matrix_type::at(column, row)];
+    }
+
+    element_type& operator()(size_type column, size_type row) noexcept
+    {
+        return mx_[matrix_type::at(column, row)];
+    }
+
+    void fill(element_type value) noexcept
+    {
+        std::ranges::fill_n(mx_.data(), rows * columns, value);
+    }
+
+    container_type* data_container() const
+    {
+        return &mx_;
+    }
+
+private:
+    size_type at(std::size_t column, std::size_t row) const noexcept
+    {
+        assert(row < M_ && "Invalid line requested.");
+        assert(column < N_ && "Invalid column requested.");
+        return column * M_ + row;
+    }
+
+    container_type mx_;
+};
 
 
-
-template<class Tp_, std::size_t M_, std::size_t N_>
-requires std::integral<Tp_> || std::floating_point<Tp_>
-class basic_numeric_matrix final
+///
+/// \brief Specialization of basic_matrix class
+/// requires integral or floating
+///
+template<class T_, std::size_t N_, std::size_t M_>
+requires std::integral<T_> ||  std::floating_point<T_>
+class basic_matrix<T_, N_, M_>
 {
-    using _mx_traits = matrix_traits<Tp_, M_, N_>;
-    using matrix_type = typename _mx_traits::container_type;
+    using matrix_type = basic_matrix<T_, N_, M_>;
 
 public:
-    using size_type = std::size_t;
-    using value_type = Tp_;
+    using container_type    = std::array<T_, N_ * M_>;
+    using size_type         = std::size_t;
+    using value_type        = T_;
 
-    static inline constexpr const size_type rows {M_};
-    static inline constexpr const std::size_t columns {N_};
+    static inline constexpr const size_type     rows    {M_};
+    static inline constexpr const size_type   columns {N_};
 
-    using row_vector    = basic_numeric_matrix<Tp_, 1, N_>;
-    using column_vector = basic_numeric_matrix<Tp_, M_, 1>;
-    using matrix_transposed = basic_numeric_matrix<Tp_, N_, M_>;
-    using matrix_multiplied = basic_numeric_matrix<Tp_, M_, matrix_transposed::columns>;
+    using row_vector        = basic_matrix<T_, 1, M_>;
+    using column_vector     = basic_matrix<T_, N_, 1>;
+    using matrix_transposed = basic_matrix<T_, M_, N_>;
+    using matrix_multiplied = basic_matrix<T_, N_, matrix_transposed::columns>;
 
-
-    basic_numeric_matrix()
+    basic_matrix()
     {
         fill(value_type{});
     }
 
 
-    basic_numeric_matrix(const value_type &data)
+    basic_matrix(const value_type &data)
     {
         fill(data);
     }
 
 
-    ~basic_numeric_matrix() noexcept = default;
+    ~basic_matrix() noexcept = default;
 
 
     void fill(value_type value) noexcept
@@ -151,85 +152,145 @@ public:
     {
         matrix_transposed mxT;
 
-        for(std::size_t y {0}; y < rows; ++y)
-            for(std::size_t x {0}; x < columns; ++x)
+        for(std::size_t y {0}; y < mxT.rows; ++y)
+            for(std::size_t x {0}; x < mxT.columns; ++x)
                 mxT(x, y) = (*this)(y, x);
 
         return mxT;
     }
 
-
-    const value_type& operator()(size_type row, size_type column) const noexcept
+    value_type operator()(size_type row, size_type column) const noexcept
     {
-        return mx_[_mx_traits::offset(row, column)];
+        return mx_[matrix_type::at(row, column)];
     }
 
 
     value_type& operator()(size_type row, size_type column) noexcept
     {
-        return mx_[_mx_traits::offset(row, column)];
+        return mx_[matrix_type::at(row, column)];
     }
 
 
-    basic_numeric_matrix& operator*=(value_type factor) noexcept
+    basic_matrix& operator*=(value_type factor) noexcept
     {
         for(std::size_t y {0}; y < rows; ++y)
             for(std::size_t x {0}; x < columns; ++x)
-                (*this)(y, x) *= factor;
+                (*this)(x, y) *= factor;
 
         return *this;
     }
 
-
-    basic_numeric_matrix& operator+=(const basic_numeric_matrix &other) noexcept
+    basic_matrix& operator+=(const basic_matrix &other) noexcept
     {
         for(std::size_t y {0}; y < rows; ++y)
             for(std::size_t x {0}; x < columns; ++x)
-                (*this)(y, x) += other(y, x);
+                (*this)(x, y) += other(x, y);
 
         return *this;
     }
 
-
-    basic_numeric_matrix& operator-=(const basic_numeric_matrix &other) noexcept
+    basic_matrix& operator-=(const basic_matrix &other) noexcept
     {
         for(std::size_t y {0}; y < rows; ++y)
             for(std::size_t x {0}; x < columns; ++x)
-                (*this)(y, x) -= other(y, x);
+                (*this)(x, y) -= other(x, y);
 
         return *this;
     }
-
 
     row_vector get_row(size_type index) const noexcept
     {
         row_vector row;
-        for(size_type n {0}; n < N_; ++n)
-            row(0, n) = (*this)(index, n);
+        for(size_type i {0}; i < columns; ++i)
+            row(0, i) = (*this)(index, i);
 
         return row;
     }
 
-
     column_vector get_column(size_type index) const noexcept
     {
         column_vector column;
-        for(size_type m {0}; m < M_; ++m)
-            column(m, 0) = (*this)(m, index);
+        for(size_type i {0}; i < rows; ++i)
+            column(i, 0) = (*this)(i, index);
 
         return column;
     }
 
-
-    matrix_type* data() const
+    container_type* data_container() const
     {
         return &mx_;
     }
 
+    friend
+    basic_numeric_matrix<T_, N_, M_>
+                        operator+(basic_numeric_matrix<T_, N_, M_> lhs,
+                                    const basic_numeric_matrix<T_, N_, M_> &rhs) noexcept
+    {
+        lhs += rhs;
+        return lhs;
+    }
+
+    friend
+    basic_numeric_matrix<T_, N_, M_>
+                        operator-(basic_numeric_matrix<T_, N_, M_> lhs,
+                                    const basic_numeric_matrix<T_, N_, M_> &rhs) noexcept
+    {
+        lhs -= rhs;
+        return lhs;
+    }
+
+    friend
+    basic_numeric_matrix<T_, N_, basic_numeric_matrix<T_, M_, N_>::columns>
+                        operator*(const basic_numeric_matrix<T_, N_, M_> &lhs,
+                                    const basic_numeric_matrix<T_, M_, N_> &rhs) noexcept
+    {
+        matrix_multiplied result;
+        std::size_t rx_counter {0};
+        std::size_t ry_counter {0};
+
+        for(std::size_t y {0}; y < lhs.rows; ++y)
+        {
+            const auto current_row {lhs.get_row(y)};
+            for(std::size_t x {0}; x < rhs.columns; ++x)
+            {
+                const auto current_column {rhs.get_column(x)};
+                T_ val {0};
+                for(std::size_t j {0}; j < M_; ++j)
+                    val += current_row(j, 0) * current_column(0, j);
+
+                result(y, x) = val;
+            }
+        }
+
+        return result;
+    }
+
+    friend
+    std::ostream& operator<<(std::ostream &stream, const basic_numeric_matrix<T_, N_, M_> &matrix)
+    {
+        for(std::size_t y {0}; y < matrix.rows; ++y)
+        {
+            for(std::size_t x {0}; x < matrix.columns; ++x)
+                stream << matrix(x, y) << " ";
+
+            stream << (y < matrix.rows -1 ? "\n" : "");
+        }
+
+        return stream;
+    }
+
 
 private:
-    matrix_type mx_;
+    size_type at(std::size_t column, std::size_t row) const noexcept
+    {
+        assert(row < M_ && "Invalid line requested.");
+        assert(column < N_ && "Invalid column requested.");
+        return column * M_ + row;
+    }
+
+    container_type mx_;
 };
+
 
 } // ack
 
