@@ -28,6 +28,10 @@
 #include <cassert>
 #include <vector>
 
+
+namespace ack {
+
+
 template<class T_>
 class Matrix
 {
@@ -108,5 +112,6 @@ private:
 
 };
 
+} // ack
 
 #endif // ACK_MATRIX_HPP
