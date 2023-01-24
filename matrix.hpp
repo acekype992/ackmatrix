@@ -24,9 +24,9 @@
 #ifndef ACK_MATRIX_HPP
 #define ACK_MATRIX_HPP
 
-#include <cassert>
-#include <array>
 #include <algorithm>
+#include <array>
+#include <cassert>
 #include <concepts>
 #include <numeric>
 #include <ostream>
@@ -122,10 +122,10 @@ public:
     static inline constexpr const size_type     rows    {M_};
     static inline constexpr const size_type   columns {N_};
 
-    using row_vector        = basic_matrix<T_, 1, M_>;
-    using column_vector     = basic_matrix<T_, N_, 1>;
+    using row_vector        = basic_matrix<T_, N_, 1>;
+    using column_vector     = basic_matrix<T_, 1, M_>;
     using matrix_transposed = basic_matrix<T_, M_, N_>;
-    using matrix_multiplied = basic_matrix<T_, N_, matrix_transposed::columns>;
+    using matrix_multiplied = basic_matrix<T_, M_, matrix_transposed::columns>;
 
     basic_matrix()
     {
@@ -202,7 +202,7 @@ public:
     {
         row_vector row;
         for(size_type i {0}; i < columns; ++i)
-            row(0, i) = (*this)(index, i);
+            row(i, 0) = (*this)(i, index);
 
         return row;
     }
@@ -211,7 +211,7 @@ public:
     {
         column_vector column;
         for(size_type i {0}; i < rows; ++i)
-            column(i, 0) = (*this)(i, index);
+            column(0, i) = (*this)(index, i);
 
         return column;
     }
@@ -240,7 +240,16 @@ public:
     }
 
     friend
-    basic_numeric_matrix<T_, N_, basic_numeric_matrix<T_, M_, N_>::columns>
+    basic_numeric_matrix<T_, N_, M_>
+                        operator*(basic_numeric_matrix<T_, N_, M_> lhs,
+                                    value_type rhs) noexcept
+    {
+        lhs *= rhs;
+        return lhs;
+    }
+
+    friend
+    matrix_multiplied
                         operator*(const basic_numeric_matrix<T_, N_, M_> &lhs,
                                     const basic_numeric_matrix<T_, M_, N_> &rhs) noexcept
     {
@@ -255,10 +264,10 @@ public:
             {
                 const auto current_column {rhs.get_column(x)};
                 T_ val {0};
-                for(std::size_t j {0}; j < M_; ++j)
+                for(std::size_t j {0}; j < N_; ++j)
                     val += current_row(j, 0) * current_column(0, j);
 
-                result(y, x) = val;
+                result(x, y) = val;
             }
         }
 
