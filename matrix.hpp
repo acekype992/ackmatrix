@@ -40,27 +40,20 @@ class Matrix
     using size_type         = std::size_t;
 
 public:
-    Matrix(size_type columns, size_type rows)
+    Matrix() noexcept : columns_ {0}, rows_ {0}
+    {}
+
+    explicit Matrix(size_type columns, size_type rows)
         : columns_ {columns}
         , rows_ {rows}
     {
-        mx_.reserve(columns_ * rows_);
         mx_.resize(columns * rows_, element_type{});
     }
 
-    Matrix(size_type columns, size_type rows, const element_type data)
+    explicit Matrix(size_type columns, size_type rows, const element_type &data)
         : columns_ {columns}
         , rows_ {rows}
     {
-        mx_.reserve(columns_ * rows_);
-        mx_.resize(columns * rows_, data);
-    }
-
-    Matrix(size_type columns, size_type rows, const element_type &data)
-        : columns_ {columns}
-        , rows_ {rows}
-    {
-        mx_.reserve(columns_ * rows_);
         mx_.resize(columns * rows_, data);
     }
 
@@ -77,22 +70,30 @@ public:
         return mx_[Matrix::at(column, row)];
     }
 
+    void create(size_type columns, size_type rows)
+    {
+        columns_ = columns;
+        rows_ = rows;
+
+        mx_.clear();
+        mx_.reserve(columns_ * rows_);
+    }
+
+    void create(size_type columns, size_type rows, const element_type &element)
+    {
+        columns_ = columns;
+        rows_ = rows;
+
+        mx_.clear();
+        mx_.resize(columns_ * rows_, element);
+    }
+
     void fill(const element_type &value) noexcept
     {
         std::ranges::fill_n(mx_.data(), rows_ * columns_, value);
     }
 
-    void fill(element_type value) noexcept
-    {
-        std::ranges::fill_n(mx_.data(), rows_ * columns_, value);
-    }
-
-    container_type* data_container() const
-    {
-        return &mx_;
-    }
-
-    container_type data_container()
+    container_type& data_container() const
     {
         return mx_;
     }
