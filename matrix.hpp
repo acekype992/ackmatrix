@@ -26,6 +26,8 @@
 
 #include <algorithm>
 #include <cassert>
+#include <fstream>
+#include <sstream>
 #include <vector>
 
 
@@ -40,7 +42,7 @@ class Matrix
     using size_type         = std::size_t;
 
 public:
-    Matrix() noexcept : columns_ {0}, rows_ {0}
+    Matrix() noexcept : columns_ {1}, rows_ {1}
     {}
 
     explicit Matrix(size_type columns, size_type rows)
@@ -96,6 +98,74 @@ public:
     container_type& data_container() const
     {
         return mx_;
+    }
+
+    void saveToFile(const std::string &filename)
+    {
+        std::ofstream file {filename};
+        if(!file.is_open())
+            throw std::runtime_error("Cannot open file to write matrix");
+
+        for(std::size_t y {0}; y < rows_; ++y)
+        {
+            for(std::size_t x {0}; x < columns_; ++x)
+            {
+                file << (*this)(x, y) << " ";
+            }
+            file << '\n';
+        }
+
+        file.close();
+    }
+
+    void loadFromFile(const std::string &filename)
+    {
+        std::ifstream file {filename};
+        if(!file.good())
+            throw std::runtime_error("Cannot open file to read matrix");
+
+        size_type columns_count {0};
+        size_type rows_count {0};
+        std::string current_line_in_file;
+        while(std::getline(file, current_line_in_file))
+        {
+
+            std::stringstream ss;
+            ss << current_line_in_file;
+
+            T_ value;
+            ++rows_count;
+            while(ss >> value)
+                ++columns_count;
+        }
+
+        columns_ = columns_count/rows_count;
+        rows_ = rows_count;
+        create(columns_, rows_);
+
+        file.clear();
+        file.seekg(0);
+
+        for(std::size_t y {0}; y < rows_; ++y)
+            for(std::size_t x {0}; x < columns_; ++x)
+                    file >> (*this)(x,y);
+
+        file.close();
+    }
+
+
+    friend
+    std::ostream& operator<<(std::ostream &stream, const Matrix<T_> &matrix)
+    {
+        for(std::size_t y {0}; y < matrix.rows_; ++y)
+        {
+            for(std::size_t x {0}; x < matrix.columns_; ++x)
+                stream << matrix(x, y) << " ";
+
+            stream << (y < matrix.rows_ -1 ? "\n" : "");
+        }
+
+        return stream;
     }
 
 private:
