@@ -153,6 +153,15 @@ public:
         file.close();
     }
 
+    size_type rows() const noexcept
+    {
+        return rows_;
+    }
+
+    size_type columns() const noexcept
+    {
+        return columns_;
+    }
 
     friend
     std::ostream& operator<<(std::ostream &stream, const Matrix<T_> &matrix)
